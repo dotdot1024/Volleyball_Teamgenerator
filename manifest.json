@@ -1,0 +1,15 @@
+{
+  "name": "Volleyball Team Generator",
+  "short_name": "TeamGen",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "https://8a04f4b6a0.clvaw-cdnwnd.com/f4f32037804f2dabe9ada9872c5ba9ee/200000310-03c2403c26/700/Bild1.webp?ph=8a04f4b6a0",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

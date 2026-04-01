@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<!--
+Volleyball Team Generator
+by [Thomas Just / SVCotta]
+MIT License
+-->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<title>🏐 Team Generator SV Cotta</title>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    padding: 10px;
+    background: #f4f4f4;
+}
+
+h1 { text-align: center; }
+
+.player {
+    display: flex;
+    gap: 5px;
+    margin: 5px 0;
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+input, select {
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 8px;
+}
+
+.main-btn { background: #4CAF50; color: white; }
+.secondary { background: #2196F3; color: white; }
+
+.team {
+    background: white;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 12px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+body.dark {
+    background: #121212;
+    color: #eee;
+}
+
+body.dark .player,
+body.dark .team {
+    background: #1e1e1e;
+}
+
+body.dark button {
+    background: #333;
+    color: white;
+}
+
+body.dark .main-btn {
+    background: #4CAF50;
+}
+
+body.dark .secondary {
+    background: #2196F3;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🏐 Team Generator SV Cotta</h1>
+
+<img src="https://8a04f4b6a0.clvaw-cdnwnd.com/f4f32037804f2dabe9ada9872c5ba9ee/200000310-03c2403c26/700/Bild1.webp?ph=8a04f4b6a0"
+     style="display:block; margin:10px auto; max-width:300px;">
+
+<div style="margin:10px 0; display:flex; align-items:center; gap:10px;">
+    <label for="teamCount" style="font-weight:bold;">Teams:</label>
+    
+    <select id="teamCount" style="font-size:16px; padding:5px;">
+        <option>2</option>
+        <option>3</option>
+        <option selected>4</option>
+        <option>5</option>
+    </select>
+</div>
+
+<label style="display:block; margin:10px 0;">
+    <input type="checkbox" id="trainerMode" onchange="renderPlayers()">
+    🔒 Trainer-Modus
+</label>
+
+<label style="display:block; margin:10px 0;">
+    <input type="checkbox" id="darkMode" onchange="toggleDarkMode()">
+    🌙 Dark Mode
+</label>
+
+<div id="players"></div>
+
+<button class="secondary" onclick="addPlayer()">➕ Spieler hinzufügen</button>
+
+<div style="display:flex; gap:10px;">
+    <button style="background:#f44336; color:white;" onclick="setAll(false)">
+        ❌ Alle abwesend
+    </button>
+
+    <button style="background:#4CAF50; color:white;" onclick="setAll(true)">
+        ✅ Alle anwesend
+    </button>
+</div>
+
+<button class="main-btn" onclick="generateTeams()">Teams generieren</button>
+<button onclick="generateTeams()">🔀 Neu mischen</button>
+
+<div id="teams"></div>
+
+<script>
+let players = JSON.parse(localStorage.getItem("players")) || [
+    {name:"Max", skill:2, present:true},
+    {name:"Tom", skill:3, present:true}
+];
+
+function save() {
+    localStorage.setItem("players", JSON.stringify(players));
+}
+
+function renderPlayers() {
+    let div = document.getElementById("players");
+    div.innerHTML = "";
+
+    let trainer = document.getElementById("trainerMode")?.checked;
+
+    players.forEach((p, i) => {
+        div.innerHTML += `
+        <div class="player">
+            <input value="${p.name}" 
+                ${!trainer ? "disabled" : ""}
+                onchange="players[${i}].name=this.value; save()">
+
+            <select 
+                ${!trainer ? "disabled" : ""}
+                onchange="players[${i}].skill=this.value; save()">
+                ${[1,2,3,4].map(s => 
+                    `<option ${p.skill==s?"selected":""}>${s}</option>`
+                ).join("")}
+            </select>
+
+            <input type="checkbox" ${p.present?"checked":""}
+                onchange="players[${i}].present=this.checked; save()">
+        </div>
+        `;
+    });
+}
+
+function addPlayer() {
+    if (!document.getElementById("trainerMode").checked) {
+        alert("Nur im Trainer-Modus möglich");
+        return;
+    }
+
+    players.push({name:"Neu", skill:2, present:true});
+    save();
+    renderPlayers();
+}
+
+function setAll(state) {
+    players.forEach(p => p.present = state);
+    save();
+    renderPlayers();
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function generateTeams() {
+    let teamCount = parseInt(document.getElementById("teamCount").value);
+    let active = players.filter(p => p.present);
+
+    if (active.length < teamCount) {
+        alert("Zu wenig Spieler!");
+        return;
+    }
+
+    let bestTeams = null;
+    let bestScore = Infinity;
+
+    let minSize = Math.floor(active.length / teamCount);
+    let maxSize = Math.ceil(active.length / teamCount);
+
+    for (let attempt = 0; attempt < 300; attempt++) {
+
+        let shuffled = [...active];
+        shuffle(shuffled);
+
+        let teams = Array.from({length: teamCount}, () => []);
+        let teamSkill = Array(teamCount).fill(0);
+
+        shuffled.forEach(p => {
+
+            // Teams finden, die noch nicht "voll" sind
+            let possibleTeams = teams
+                .map((team, i) => ({i, size: team.length}))
+                .filter(t => t.size < maxSize);
+
+            // davon das mit niedrigstem Skill wählen
+            let minIndex = possibleTeams.reduce((best, t) =>
+                teamSkill[t.i] < teamSkill[best] ? t.i : best
+            , possibleTeams[0].i);
+
+            teams[minIndex].push(p);
+            teamSkill[minIndex] += parseInt(p.skill);
+        });
+
+        let diff = Math.max(...teamSkill) - Math.min(...teamSkill);
+
+        // leichte Strafe für ungleiche Teamgrößen
+        let sizePenalty = teams.reduce((sum, t) => sum + Math.abs(t.length - minSize), 0);
+
+        let score = diff + sizePenalty * 2;
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestTeams = teams;
+        }
+    }
+
+    renderTeams(bestTeams);
+}
+
+function renderTeams(teams) {
+    let out = document.getElementById("teams");
+    out.innerHTML = "";
+
+    let skills = teams.map(team =>
+        team.reduce((sum,p)=>sum+parseInt(p.skill),0)
+    );
+
+    let diff = Math.max(...skills) - Math.min(...skills);
+
+    out.innerHTML += `<b>Skill-Differenz: ${diff}</b>`;
+
+    teams.forEach((team, i) => {
+        let total = skills[i];
+
+        out.innerHTML += `
+        <div class="team">
+            <b>Team ${i+1} (Skill: ${total})</b><br>
+            ${team.map(p => `${p.name} (${p.skill})`).join("<br>")}
+        </div>
+        `;
+    });
+}
+
+function toggleDarkMode() {
+    let enabled = document.getElementById("darkMode").checked;
+
+    document.body.classList.toggle("dark", enabled);
+
+    localStorage.setItem("darkMode", enabled);
+}
+
+renderPlayers();
+
+let dark = localStorage.getItem("darkMode") === "true";
+
+if (dark) {
+    document.body.classList.add("dark");
+    document.getElementById("darkMode").checked = true;
+}
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+}
+
+</script>
+
+</body>
+</html>
