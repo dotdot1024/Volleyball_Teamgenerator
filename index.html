@@ -24,11 +24,31 @@ h1 { text-align: center; }
 
 .player {
     display: flex;
-    gap: 5px;
+    align-items: center;
+    gap: 6px;
     margin: 5px 0;
     background: white;
     padding: 8px;
     border-radius: 8px;
+}
+
+/* Name bekommt den meisten Platz */
+.player input[type="text"] {
+    flex: 1;
+    min-width: 0; /* wichtig für iPhone */
+}
+
+/* Skill kompakt halten */
+.player select {
+    width: 110px;
+    flex-shrink: 0;
+}
+
+/* Checkbox fix rechts */
+.player input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
 }
 
 input, select {
