@@ -92,8 +92,8 @@ body.dark .secondary {
     
     <select id="teamCount" style="font-size:16px; padding:5px;">
         <option>2</option>
-        <option>3</option>
-        <option selected>4</option>
+        <option selected>3</option>
+        <option>4</option>
         <option>5</option>
     </select>
 </div>
@@ -129,10 +129,17 @@ body.dark .secondary {
 
 <script>
 let players = JSON.parse(localStorage.getItem("players")) || [
-    {name:"Max", skill:2, present:true},
-    {name:"Tom", skill:3, present:true}
+    {name:"Thomas", skill:2, present:true},
+    {name:"Susu", skill:2, present:true}
 ];
 
+	const skillNames = {
+    1: "Rookie",
+    2: "Hobby",
+    3: "Stabil",
+    4: "Maschine"
+};
+	
 function save() {
     localStorage.setItem("players", JSON.stringify(players));
 }
@@ -153,9 +160,11 @@ function renderPlayers() {
             <select 
                 ${!trainer ? "disabled" : ""}
                 onchange="players[${i}].skill=this.value; save()">
-                ${[1,2,3,4].map(s => 
-                    `<option ${p.skill==s?"selected":""}>${s}</option>`
-                ).join("")}
+              ${[1,2,3,4].map(s => 
+				    `<option ${p.skill==s?"selected":""}>
+				        ${s} - ${skillNames[s]}
+				    </option>`
+				).join("")}
             </select>
 
             <input type="checkbox" ${p.present?"checked":""}
@@ -262,7 +271,7 @@ function renderTeams(teams) {
         out.innerHTML += `
         <div class="team">
             <b>Team ${i+1} (Skill: ${total})</b><br>
-            ${team.map(p => `${p.name} (${p.skill})`).join("<br>")}
+            ${team.map(p => `${p.name} (${skillNames[p.skill]})`).join("<br>")}
         </div>
         `;
     });
