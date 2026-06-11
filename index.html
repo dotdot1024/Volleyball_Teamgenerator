@@ -199,18 +199,30 @@ body.dark select {
 
 <h2>🏆 Turnierplaner</h2>
 
+<div class="team">
+
+<h3>🏐 Teams</h3>
+
+<div id="teamTable"></div>
+
+</div>
+
 <label>Teams:</label>
-<select id="tournamentTeams">
+<select
+id="tournamentTeams"
+onchange="renderTeamTable()">
+
     <option>3</option>
     <option>4</option>
     <option>5</option>
     <option>6</option>
     <option>7</option>
-    <option>8</option>
+    <option selected>8</option>
     <option>9</option>
     <option>10</option>
     <option>11</option>
     <option>12</option>
+
 </select>
 
 <br><br>
@@ -227,7 +239,7 @@ body.dark select {
 <select id="tournamentMode">
     <option value="roundRobin">Jeder gegen Jeden</option>
     <option value="groups">2 Gruppen</option>
-    <option value="groupsFinal">Gruppen + Platzierung</option>
+    <option value="groupsPlacement">Gruppen + komplette Platzierung</option>
 </select>
 
 <br><br>
@@ -432,6 +444,124 @@ function showTab(tab) {
         tab === "tournament" ? "block" : "none";
 }
 
+function generateRoundRobin(teamList) {
+
+    let teams = [...teamList];
+
+    if (teams.length % 2 !== 0) {
+        teams.push("SPIELFREI");
+    }
+
+    let rounds = [];
+    let n = teams.length;
+
+    for (let round = 0; round < n - 1; round++) {
+
+        let matches = [];
+
+        for (let i = 0; i < n / 2; i++) {
+
+            let home = teams[i];
+            let away = teams[n - 1 - i];
+
+            if (
+                home !== "SPIELFREI" &&
+                away !== "SPIELFREI"
+            ) {
+                matches.push([home, away]);
+            }
+        }
+
+        rounds.push(matches);
+
+        let fixed = teams[0];
+
+        let rotating = teams.slice(1);
+
+        rotating.unshift(rotating.pop());
+
+        teams = [fixed, ...rotating];
+    }
+
+    return rounds;
+}
+
+function renderTeamTable(){
+
+    let count =
+        parseInt(
+            document.getElementById(
+                "tournamentTeams"
+            ).value
+        );
+
+    let html = `
+    <table style="width:100%;border-collapse:collapse;">
+    <tr>
+        <th>Team</th>
+        <th>Verein</th>
+        <th>Start</th>
+    </tr>
+    `;
+
+    for(let i=0;i<count;i++){
+
+        html += `
+        <tr>
+
+        <td>
+            <input
+            id="teamName${i}"
+            value="Team ${i+1}"
+            style="
+			width:95%;
+			box-sizing:border-box;
+			">
+        </td>
+
+        <td>
+            <input
+				id="teamClub${i}"
+				placeholder="Verein"
+				style="
+				width:95%;
+				box-sizing:border-box;
+				">
+        </td>
+
+        <td>
+            <select id="teamStart${i}">
+                <option value="normal">
+                    Normal
+                </option>
+
+                <option value="late">
+                    Spät
+                </option>
+            </select>
+        </td>
+
+        </tr>
+        `;
+    }
+
+    html += `</table>`;
+
+    document.getElementById(
+        "teamTable"
+    ).innerHTML = html;
+}
+
+function getClub(teamName, teamData){
+
+    let team =
+        teamData.find(
+            t => t.name === teamName
+        );
+
+    return team ? team.club : "";
+}
+
 function generateTournament() {
 
     let teams =
@@ -455,27 +585,84 @@ function generateTournament() {
 	let matches = [];
 	let groupInfo = "";
 
-    let names = [];
+	let groupMatches = 0;
+	let placementMatches = 0;
 
-    for(let i=0;i<teams;i++){
-        names.push("Team " + (i+1));
-    }
+let teamData = [];
 
-    if(mode === "roundRobin"){
+for(let i=0;i<teams;i++){
 
-        for(let i=0;i<teams;i++){
-            for(let j=i+1;j<teams;j++){
+    teamData.push({
 
-                matches.push([
-                    names[i],
-                    names[j]
-                ]);
+        name:
+            document.getElementById(
+                "teamName"+i
+            ).value || ("Team "+(i+1)),
 
-            }
-        }
-    }
+        club:
+            document.getElementById(
+                "teamClub"+i
+            ).value || "",
 
-    if(mode === "groups" || mode === "groupsFinal"){
+        late:
+            document.getElementById(
+                "teamStart"+i
+            ).value === "late"
+    });
+}
+
+let names =
+    teamData.map(t => t.name);
+	
+	let refereeCount = {};
+	
+	let lateTeams =
+    teamData
+        .filter(t => t.late)
+        .map(t => t.name);
+		console.log("Late Teams:", lateTeams);
+
+function sortLateMatches(round){
+
+    round.sort((a,b)=>{
+
+        let aLate =
+            lateTeams.includes(a[0]) ||
+            lateTeams.includes(a[1]);
+
+        let bLate =
+            lateTeams.includes(b[0]) ||
+            lateTeams.includes(b[1]);
+
+        return Number(aLate) - Number(bLate);
+    });
+    return round;
+}
+
+	let roundRobinRounds = [];
+
+	if(mode === "roundRobin"){
+
+		roundRobinRounds =
+			generateRoundRobin(names);
+
+		roundRobinRounds.forEach(round => {
+
+			round.forEach(match => {
+
+				matches.push(match);
+				
+				groupMatches++;
+
+			});
+
+		});
+	}
+
+    if(
+    mode === "groups" ||
+    mode === "groupsPlacement"
+){
 
         let split =
             Math.ceil(teams/2);
@@ -486,49 +673,161 @@ function generateTournament() {
         let groupB =
             names.slice(split);
 		
-		groupInfo = `
-			<div class="team">
-			<h3>🅰 Gruppe A</h3>
-			${groupA.join("<br>")}
-			</div>
+		groupInfo = "";
 
-			<div class="team">
-			<h3>🅱 Gruppe B</h3>
-			${groupB.join("<br>")}
-			</div>
-			`;
+let roundsA =
+    generateRoundRobin(groupA)
+    .map(r => sortLateMatches(r));
+let roundsB =
+    generateRoundRobin(groupB)
+    .map(r => sortLateMatches(r));
 
-        function addGroup(group){
+let maxRounds =
+    Math.max(
+        roundsA.length,
+        roundsB.length
+    );
 
-            for(let i=0;i<group.length;i++){
-                for(let j=i+1;j<group.length;j++){
+groupInfo = `
+<div class="team">
+<h3>🅰 Gruppe A</h3>
+${groupA.join("<br>")}
+</div>
 
-                    matches.push([
-                        group[i],
-                        group[j]
-                    ]);
+<div class="team">
+<h3>🅱 Gruppe B</h3>
+${groupB.join("<br>")}
+</div>
+`;
 
-                }
+for(let r=0; r<maxRounds; r++){
+
+    groupInfo += `
+    <div class="team">
+    <h3>🏐 Runde ${r+1}</h3>
+    `;
+
+    let aRound = roundsA[r] || [];
+    let bRound = roundsB[r] || [];
+
+    if(courts === 1){
+
+        let maxMatches =
+            Math.max(
+                aRound.length,
+                bRound.length
+            );
+
+        for(let m=0; m<maxMatches; m++){
+
+            if(aRound[m]){
+
+                matches.push(aRound[m]);
+                groupMatches++;
+
+                groupInfo += `
+                🅰 ${aRound[m][0]}
+                vs
+                ${aRound[m][1]}<br>
+                `;
+            }
+
+            if(bRound[m]){
+
+                matches.push(bRound[m]);
+                groupMatches++;
+
+                groupInfo += `
+                🅱 ${bRound[m][0]}
+                vs
+                ${bRound[m][1]}<br>
+                `;
             }
         }
 
-        addGroup(groupA);
-        addGroup(groupB);
+    } else {
 
-        if(mode === "groupsFinal"){
+        let maxMatches =
+            Math.max(
+                aRound.length,
+                bRound.length
+            );
 
-            let max =
-                Math.min(groupA.length, groupB.length);
+        for(let m=0; m<maxMatches; m++){
 
-            for(let i=1;i<=max;i++){
+            if(aRound[m]){
+                matches.push(aRound[m]);
+                groupMatches++;
+            }
 
-                matches.push([
-                    "A"+i,
-                    "B"+i
-                ]);
+            if(bRound[m]){
+                matches.push(bRound[m]);
+                groupMatches++;
+            }
 
+            if(aRound[m] && bRound[m]){
+
+                groupInfo += `
+                Feld 1:
+                ${aRound[m][0]}
+                vs
+                ${aRound[m][1]}
+                <br>
+
+                Feld 2:
+                ${bRound[m][0]}
+                vs
+                ${bRound[m][1]}
+                <br><br>
+                `;
             }
         }
+    }
+
+    groupInfo += `
+    </div>
+    `;
+}
+
+     if(mode === "groupsPlacement"){
+
+    let max =
+        Math.min(groupA.length, groupB.length);
+
+    matches.push([
+        "--- PLATZIERUNGSSPIELE ---",
+        ""
+    ]);
+
+    for(let i=max;i>=1;i--){
+
+        let label = "";
+
+        let platz = i * 2 - 1;
+
+        if(i === 1){
+
+            label = "🏆 Finale";
+
+        } else {
+
+            label =
+                "Platz " +
+                platz;
+        }
+
+        matches.push([
+            label,
+            ""
+        ]);
+
+        matches.push([
+            "A" + i,
+            "B" + i
+        ]);
+		placementMatches++;
+    }
+}
     }
 
     let slotLength =
@@ -539,6 +838,11 @@ function generateTournament() {
 
     let totalMinutes =
         totalSlots * slotLength;
+	let hours =
+    Math.floor(totalMinutes / 60);
+
+	let minutes =
+		totalMinutes % 60;
 
     let start =
         startTime.split(":");
@@ -547,13 +851,133 @@ function generateTournament() {
         parseInt(start[0]) * 60 +
         parseInt(start[1]);
 
+let referees = [];
+
+for(let i=0;i<matches.length;i++){
+
+    let match = matches[i];
+
+    if(
+        !match[1] ||
+        match[1] === ""
+    ){
+        referees.push("");
+        continue;
+    }
+
+if(
+    match[0].startsWith("A") ||
+    match[0].startsWith("B")
+){
+
+    referees.push("offen");
+    continue;
+}
+
+    let teamA = match[0];
+    let teamB = match[1];
+
+    let clubA =
+        getClub(teamA, teamData);
+
+    let clubB =
+        getClub(teamB, teamData);
+
+    let candidates =
+        names.filter(name => {
+
+            if(
+                name === teamA ||
+                name === teamB
+            ){
+                return false;
+            }
+
+            let club =
+                getClub(name, teamData);
+
+            if(
+                club &&
+                (
+                    club === clubA ||
+                    club === clubB
+                )
+            ){
+                return false;
+            }
+
+// Erste Spiele: Spät-Teams vermeiden
+
+if(
+    i < 4 &&
+    teamData.find(
+        t => t.name === name
+    )?.late
+){
+    return false;
+}
+
+            return true;
+        });
+
+if(candidates.length === 0){
+
+    candidates =
+        names.filter(name => {
+
+            if(
+                name === teamA ||
+                name === teamB
+            ){
+                return false;
+            }
+
+            let club =
+                getClub(name, teamData);
+
+            return !(
+                club &&
+                (
+                    club === clubA ||
+                    club === clubB
+                )
+            );
+        });
+}
+
+    candidates.sort((a,b)=>{
+
+        let countA =
+            refereeCount[a] || 0;
+
+        let countB =
+            refereeCount[b] || 0;
+
+        return countA - countB;
+    });
+
+    let referee =
+        candidates.length
+        ? candidates[0]
+        : "-";
+
+    referees.push(referee);
+
+    refereeCount[referee] =
+        (refereeCount[referee] || 0) + 1;
+}
+
 let output = `
     <div class="team">
     <h3>🏆 Turnierübersicht</h3>
 
-    <b>Spiele:</b> ${matches.length}<br>
-    <b>Felder:</b> ${courts}<br>
-    <b>Gesamtdauer:</b> ${totalMinutes} Minuten
+    <b>Vorrunde:</b> ${groupMatches}<br>
+	<b>Platzierung:</b> ${placementMatches}<br>
+	<b>Gesamt:</b> ${groupMatches + placementMatches}<br>
+	<b>Felder:</b> ${courts}<br>
+
+	<b>Gesamtdauer:</b>
+	${hours}h ${String(minutes).padStart(2,'0')}min
     </div>
 
     ${groupInfo}
@@ -562,7 +986,21 @@ let output = `
     <h3>📅 Spielplan</h3>
 `;
 
+	let roundIndex = 0;
+	let matchCounter = 0;
+
     for(let i=0;i<matches.length;i++){
+
+        if(
+            mode === "roundRobin" &&
+            matchCounter === 0
+        ){
+            output += `
+                <br>
+                <b>🏐 Runde ${roundIndex + 1}</b>
+                <br><br>
+            `;
+        }
 
         if(i % courts === 0){
 
@@ -581,15 +1019,57 @@ let output = `
         let court =
             (i % courts) + 1;
 
-        output += `
-            ${String(h).padStart(2,'0')}:
-            ${String(m).padStart(2,'0')}
-            | Feld ${court}
-            | ${matches[i][0]}
-            vs
-            ${matches[i][1]}
-            <br>
-        `;
+ if(
+    matches[i][0]
+    .startsWith("---")
+){
+
+    output += `
+    <hr>
+    <b>${matches[i][0]}</b>
+    <hr>
+    `;
+
+}
+else if(
+    matches[i][1] === ""
+){
+
+    output += `
+    <br>
+    <b>${matches[i][0]}</b>
+    <br>
+    `;
+
+}
+else{
+
+output += `
+    ${String(h).padStart(2,'0')}:
+    ${String(m).padStart(2,'0')}
+    | Feld ${court}
+    | ${matches[i][0]}
+    vs
+    ${matches[i][1]}
+    <br>
+
+    👨‍⚖️ Schiri: ${referees[i]}
+    <br><br>
+`;
+}
+
+        if(mode === "roundRobin"){
+
+            matchCounter++;
+
+            if(
+                roundRobinRounds[roundIndex] &&
+                matchCounter >= roundRobinRounds[roundIndex].length
+            ){
+                roundIndex++;
+                matchCounter = 0;
+            }
+        }
     }
 
     let endH =
@@ -613,6 +1093,8 @@ let output = `
         "tournamentOutput"
     ).innerHTML = output;
 }
+
+renderTeamTable();
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
