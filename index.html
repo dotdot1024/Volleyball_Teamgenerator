@@ -142,6 +142,18 @@ body.dark select {
 <img src="https://8a04f4b6a0.clvaw-cdnwnd.com/f4f32037804f2dabe9ada9872c5ba9ee/200000310-03c2403c26/700/Bild1.webp?ph=8a04f4b6a0"
      style="display:block; margin:10px auto; max-width:300px;">
 
+<div id="generatorTab">
+	 
+	 <div style="display:flex; gap:5px; margin-bottom:15px;">
+    <button onclick="showTab('generator')" class="secondary">
+        🏐 Team Generator
+    </button>
+
+    <button onclick="showTab('tournament')" class="secondary">
+        🏆 Turnierplaner
+    </button>
+</div>
+
 <div style="margin:10px 0; display:flex; align-items:center; gap:10px;">
     <label for="teamCount" style="font-weight:bold;">Teams:</label>
     
@@ -181,6 +193,68 @@ body.dark select {
 <button onclick="generateTeams()">🔀 Neu mischen</button>
 
 <div id="teams"></div>
+</div>
+
+<div id="tournamentTab" style="display:none;">
+
+<h2>🏆 Turnierplaner</h2>
+
+<label>Teams:</label>
+<select id="tournamentTeams">
+    <option>3</option>
+    <option>4</option>
+    <option>5</option>
+    <option>6</option>
+    <option>7</option>
+    <option>8</option>
+    <option>9</option>
+    <option>10</option>
+    <option>11</option>
+    <option>12</option>
+</select>
+
+<br><br>
+
+<label>Felder:</label>
+<select id="courtCount">
+    <option value="1">1 Feld</option>
+    <option value="2">2 Felder</option>
+</select>
+
+<br><br>
+
+<label>Modus:</label>
+<select id="tournamentMode">
+    <option value="roundRobin">Jeder gegen Jeden</option>
+    <option value="groups">2 Gruppen</option>
+    <option value="groupsFinal">Gruppen + Platzierung</option>
+</select>
+
+<br><br>
+
+<label>Spielzeit (Minuten):</label>
+<input type="number" id="gameDuration" value="10">
+
+<br><br>
+
+<label>Wechselzeit (Minuten):</label>
+<input type="number" id="changeTime" value="2">
+
+<br><br>
+
+<label>Startzeit:</label>
+<input type="time" id="startTime" value="09:00">
+
+<br><br>
+
+<button class="main-btn"
+onclick="generateTournament()">
+🏆 Turnier erstellen
+</button>
+
+<div id="tournamentOutput"></div>
+
+</div>
 
 <script>
 let players = JSON.parse(localStorage.getItem("players")) || [
@@ -347,6 +421,197 @@ let dark = localStorage.getItem("darkMode") === "true";
 if (dark) {
     document.body.classList.add("dark");
     document.getElementById("darkMode").checked = true;
+}
+
+function showTab(tab) {
+
+    document.getElementById("generatorTab").style.display =
+        tab === "generator" ? "block" : "none";
+
+    document.getElementById("tournamentTab").style.display =
+        tab === "tournament" ? "block" : "none";
+}
+
+function generateTournament() {
+
+    let teams =
+        parseInt(document.getElementById("tournamentTeams").value);
+
+    let courts =
+        parseInt(document.getElementById("courtCount").value);
+
+    let mode =
+        document.getElementById("tournamentMode").value;
+
+    let gameDuration =
+        parseInt(document.getElementById("gameDuration").value);
+
+    let changeTime =
+        parseInt(document.getElementById("changeTime").value);
+
+    let startTime =
+        document.getElementById("startTime").value;
+
+	let matches = [];
+	let groupInfo = "";
+
+    let names = [];
+
+    for(let i=0;i<teams;i++){
+        names.push("Team " + (i+1));
+    }
+
+    if(mode === "roundRobin"){
+
+        for(let i=0;i<teams;i++){
+            for(let j=i+1;j<teams;j++){
+
+                matches.push([
+                    names[i],
+                    names[j]
+                ]);
+
+            }
+        }
+    }
+
+    if(mode === "groups" || mode === "groupsFinal"){
+
+        let split =
+            Math.ceil(teams/2);
+
+        let groupA =
+            names.slice(0,split);
+
+        let groupB =
+            names.slice(split);
+		
+		groupInfo = `
+			<div class="team">
+			<h3>🅰 Gruppe A</h3>
+			${groupA.join("<br>")}
+			</div>
+
+			<div class="team">
+			<h3>🅱 Gruppe B</h3>
+			${groupB.join("<br>")}
+			</div>
+			`;
+
+        function addGroup(group){
+
+            for(let i=0;i<group.length;i++){
+                for(let j=i+1;j<group.length;j++){
+
+                    matches.push([
+                        group[i],
+                        group[j]
+                    ]);
+
+                }
+            }
+        }
+
+        addGroup(groupA);
+        addGroup(groupB);
+
+        if(mode === "groupsFinal"){
+
+            let max =
+                Math.min(groupA.length, groupB.length);
+
+            for(let i=1;i<=max;i++){
+
+                matches.push([
+                    "A"+i,
+                    "B"+i
+                ]);
+
+            }
+        }
+    }
+
+    let slotLength =
+        gameDuration + changeTime;
+
+    let totalSlots =
+        Math.ceil(matches.length / courts);
+
+    let totalMinutes =
+        totalSlots * slotLength;
+
+    let start =
+        startTime.split(":");
+
+    let current =
+        parseInt(start[0]) * 60 +
+        parseInt(start[1]);
+
+let output = `
+    <div class="team">
+    <h3>🏆 Turnierübersicht</h3>
+
+    <b>Spiele:</b> ${matches.length}<br>
+    <b>Felder:</b> ${courts}<br>
+    <b>Gesamtdauer:</b> ${totalMinutes} Minuten
+    </div>
+
+    ${groupInfo}
+
+    <div class="team">
+    <h3>📅 Spielplan</h3>
+`;
+
+    for(let i=0;i<matches.length;i++){
+
+        if(i % courts === 0){
+
+            var slotTime =
+                current;
+
+            current += slotLength;
+        }
+
+        let h =
+            Math.floor(slotTime / 60);
+
+        let m =
+            slotTime % 60;
+
+        let court =
+            (i % courts) + 1;
+
+        output += `
+            ${String(h).padStart(2,'0')}:
+            ${String(m).padStart(2,'0')}
+            | Feld ${court}
+            | ${matches[i][0]}
+            vs
+            ${matches[i][1]}
+            <br>
+        `;
+    }
+
+    let endH =
+        Math.floor(current / 60);
+
+    let endM =
+        current % 60;
+
+	output += `
+		</div>
+
+		<div class="team">
+		<h3>⏰ Turnierende</h3>
+
+		${String(endH).padStart(2,'0')}:
+		${String(endM).padStart(2,'0')}
+		</div>
+	`;
+
+    document.getElementById(
+        "tournamentOutput"
+    ).innerHTML = output;
 }
 
 if ("serviceWorker" in navigator) {
