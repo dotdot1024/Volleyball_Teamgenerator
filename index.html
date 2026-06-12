@@ -131,29 +131,47 @@ body.dark select {
     background-size: 5px 5px;
     background-repeat: no-repeat;
 }
+
+.backBtn{
+    width:auto;
+    padding:8px 12px;
+    font-size:14px;
+    margin-bottom:10px;
+}
 	
 </style>
 </head>
 
 <body>
 
-<h1>🏐 Team Generator SV Cotta</h1>
+<div id="homeTab">
+
+<h1>🏐 SV Cotta</h1>
 
 <img src="https://8a04f4b6a0.clvaw-cdnwnd.com/f4f32037804f2dabe9ada9872c5ba9ee/200000310-03c2403c26/700/Bild1.webp?ph=8a04f4b6a0"
      style="display:block; margin:10px auto; max-width:300px;">
 
-<div id="generatorTab">
-	 
-	 <div style="display:flex; gap:5px; margin-bottom:15px;">
-    <button onclick="showTab('generator')" class="secondary">
-        🏐 Team Generator
-    </button>
+<button class="main-btn"
+onclick="showTab('generator')">
+🏐 Team Generator
+</button>
 
-    <button onclick="showTab('tournament')" class="secondary">
-        🏆 Turnierplaner
-    </button>
+<button class="secondary"
+onclick="showTab('tournament')">
+🏆 Turnierplaner
+</button>
+
 </div>
 
+<div id="generatorTab" style="display:none;">
+
+<h1>🏐 Team Generator</h1>
+
+<button class="backBtn"
+onclick="showTab('home')">
+← Zurück
+</button>
+	 
 <div style="margin:10px 0; display:flex; align-items:center; gap:10px;">
     <label for="teamCount" style="font-weight:bold;">Teams:</label>
     
@@ -197,7 +215,12 @@ body.dark select {
 
 <div id="tournamentTab" style="display:none;">
 
-<h2>🏆 Turnierplaner</h2>
+<h1>🏆 Turnierplaner</h1>
+
+<button class="backBtn"
+onclick="showTab('home')">
+← Zurück
+</button>
 
 <div class="team">
 
@@ -436,6 +459,9 @@ if (dark) {
 }
 
 function showTab(tab) {
+
+    document.getElementById("homeTab").style.display =
+        tab === "home" ? "block" : "none";
 
     document.getElementById("generatorTab").style.display =
         tab === "generator" ? "block" : "none";
@@ -945,21 +971,61 @@ if(candidates.length === 0){
         });
 }
 
-    candidates.sort((a,b)=>{
+let candidateScores = candidates.map(name => {
 
-        let countA =
-            refereeCount[a] || 0;
+    let score =
+        refereeCount[name] || 0;
 
-        let countB =
-            refereeCount[b] || 0;
+    // vorheriges Spiel
 
-        return countA - countB;
-    });
+    if(i > 0){
 
-    let referee =
-        candidates.length
-        ? candidates[0]
-        : "-";
+        let prev = matches[i-1];
+
+        if(
+            prev &&
+            prev[1] !== "" &&
+            (
+                prev[0] === name ||
+                prev[1] === name
+            )
+        ){
+            score += 1000;
+        }
+    }
+
+    // nächstes Spiel
+
+    if(i < matches.length - 1){
+
+        let next = matches[i+1];
+
+        if(
+            next &&
+            next[1] !== "" &&
+            (
+                next[0] === name ||
+                next[1] === name
+            )
+        ){
+            score += 500;
+        }
+    }
+
+    return {
+        name,
+        score
+    };
+});
+
+candidateScores.sort(
+    (a,b)=>a.score-b.score
+);
+
+let referee =
+    candidateScores.length
+    ? candidateScores[0].name
+    : "-";
 
     referees.push(referee);
 
@@ -1054,6 +1120,24 @@ output += `
     <br>
 
     👨‍⚖️ Schiri: ${referees[i]}
+    <br>
+
+    Punkte:
+
+    <input
+        type="number"
+        id="scoreA_${i}"
+        style="width:60px;"
+    >
+
+    :
+
+    <input
+        type="number"
+        id="scoreB_${i}"
+        style="width:60px;"
+    >
+
     <br><br>
 `;
 }
@@ -1089,12 +1173,36 @@ output += `
 		</div>
 	`;
 
+output += `
+<div class="team">
+
+<button
+onclick="calculateTable()"
+class="main-btn">
+
+📊 Tabelle berechnen
+
+</button>
+
+</div>
+`;
+
     document.getElementById(
         "tournamentOutput"
     ).innerHTML = output;
 }
 
+function calculateTable(){
+
+    alert(
+        "Tabellenberechnung kommt als Nächstes 🙂"
+    );
+
+}
+
 renderTeamTable();
+
+showTab("home");
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
