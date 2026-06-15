@@ -273,6 +273,7 @@ onchange="renderTeamTable()">
     <option value="roundRobin">Jeder gegen Jeden</option>
     <option value="groups">2 Gruppen</option>
     <option value="groupsPlacement">Gruppen + komplette Platzierung</option>
+	<option value="groupsSemi">Gruppen + Halbfinale + Platzierung</option>
 </select>
 
 <br><br>
@@ -302,7 +303,7 @@ onclick="generateTournament()">
 </div>
 
 <script>
-const APP_VERSION = "0.3-beta";
+const APP_VERSION = "0.3.1-beta";
 
 let players = JSON.parse(localStorage.getItem("players")) || [
     {name:"Thomas", skill:2, present:true},
@@ -699,7 +700,8 @@ function sortLateMatches(round){
 
     if(
     mode === "groups" ||
-    mode === "groupsPlacement"
+    mode === "groupsPlacement" ||
+	mode === "groupsSemi"
 ){
 
         let split =
@@ -866,6 +868,72 @@ for(let r=0; r<maxRounds; r++){
 		placementMatches++;
     }
 }
+
+if(mode === "groupsSemi"){
+
+    let max =
+        Math.min(
+            groupA.length,
+            groupB.length
+        );
+
+    matches.push([
+    "--- HALBFINALE ---",
+    ""
+]);
+
+matches.push([
+    "HF1: A1",
+    "B2"
+]);
+placementMatches++;
+
+matches.push([
+    "HF2: B1",
+    "A2"
+]);
+placementMatches++;
+
+matches.push([
+    "--- PLATZIERUNG ---",
+    ""
+]);
+
+    for(let i=3;i<=max;i++){
+
+        matches.push([
+            "A" + i,
+            "B" + i
+        ]);
+
+        placementMatches++;
+    }
+
+    matches.push([
+        "--- PLATZ 3 ---",
+        ""
+    ]);
+
+    matches.push([
+        "V HF1",
+        "V HF2"
+    ]);
+
+    placementMatches++;
+
+    matches.push([
+        "--- FINALE ---",
+        ""
+    ]);
+
+    matches.push([
+        "S HF1",
+        "S HF2"
+    ]);
+
+    placementMatches++;
+}
+
     }
 
     let slotLength =
