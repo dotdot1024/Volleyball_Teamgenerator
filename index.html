@@ -10,7 +10,7 @@ MIT License
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4CAF50">
-<title>🏐 Team Generator SV Cotta</title>
+<title>🏐 SV Cotta App</title>
 
 <style>
 body {
@@ -161,6 +161,16 @@ onclick="showTab('tournament')">
 🏆 Turnierplaner
 </button>
 
+<div id="versionInfo"
+style="
+text-align:center;
+margin-top:20px;
+font-size:12px;
+color:#777;
+">
+
+</div>
+
 </div>
 
 <div id="generatorTab" style="display:none;">
@@ -292,6 +302,8 @@ onclick="generateTournament()">
 </div>
 
 <script>
+const APP_VERSION = "0.3-beta";
+
 let players = JSON.parse(localStorage.getItem("players")) || [
     {name:"Thomas", skill:2, present:true},
     {name:"Susu", skill:2, present:true}
@@ -859,8 +871,15 @@ for(let r=0; r<maxRounds; r++){
     let slotLength =
         gameDuration + changeTime;
 
-    let totalSlots =
-        Math.ceil(matches.length / courts);
+let realGames =
+    matches.filter(
+        m => m[1] !== ""
+    ).length;
+
+let totalSlots =
+    Math.ceil(
+        realGames / courts
+    );
 
     let totalMinutes =
         totalSlots * slotLength;
@@ -1068,20 +1087,6 @@ let output = `
             `;
         }
 
-        if(i % courts === 0){
-
-            var slotTime =
-                current;
-
-            current += slotLength;
-        }
-
-        let h =
-            Math.floor(slotTime / 60);
-
-        let m =
-            slotTime % 60;
-
         let court =
             (i % courts) + 1;
 
@@ -1109,6 +1114,16 @@ else if(
 
 }
 else{
+
+let slotTime = current;
+
+current += slotLength;
+
+let h =
+    Math.floor(slotTime / 60);
+
+let m =
+    slotTime % 60;
 
 output += `
     ${String(h).padStart(2,'0')}:
@@ -1201,6 +1216,11 @@ function calculateTable(){
 }
 
 renderTeamTable();
+
+document.getElementById(
+    "versionInfo"
+).innerHTML =
+    "Version " + APP_VERSION;
 
 showTab("home");
 
